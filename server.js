@@ -145,5 +145,5 @@ app.post("/download", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running at https://youtubedownloader-g4emorek.b4a.run:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
