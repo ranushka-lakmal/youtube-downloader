@@ -2,7 +2,8 @@ FROM node:18
 WORKDIR /app
 
 # Install yt-dlp
-RUN apt-get update && apt-get install -y python3-pip && pip3 install yt-dlp
+#RUN apt-get update && apt-get install -y python3-pip && pip3 install yt-dlp
+RUN apt-get update && apt-get install -y python3-pip yt-dlp
 
 # Install node dependencies
 COPY package*.json ./
