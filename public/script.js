@@ -20,7 +20,6 @@ document.getElementById("fetchQualitiesBtn").addEventListener("click", async () 
    
     try {
       const response = await fetch("http://localhost:3000/get-qualities", {
-     // const response = await fetch("https://youtubedownloader-g4emorek.b4a.run:3000/get-qualities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: videoUrl }),
@@ -125,7 +124,6 @@ document.getElementById("fetchQualitiesBtn").addEventListener("click", async () 
   
     try {
       const response = await fetch("http://localhost:3000/download", {
-      //const response = await fetch("https://youtubedownloader-g4emorek.b4a.run:3000/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: videoUrl, formatId: selectedQuality }),
