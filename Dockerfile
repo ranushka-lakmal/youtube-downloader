@@ -1,26 +1,26 @@
-FROM node:18
+FROM node:18 AS build
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# Install required packages and yt-dlp using pip3
-RUN apt-get update && \
-    apt-get install -y python3-pip && \
-    pip3 install --upgrade pip && \
-    pip3 install yt-dlp
+# Install dependencies
+RUN apt-get update && apt-get install -y python3 curl
+
+# Install yt-dlp via direct download
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && chmod +x /usr/local/bin/yt-dlp
 
 # Install node dependencies
 COPY package*.json ./
 RUN npm install
 
-# Copy the rest of your application code
+# Copy the application code
 COPY . .
 
-# Set environment variable for the port
+# Set environment variable for the application
 ENV PORT 3000
 
-# Expose the application port
+# Expose the port the app will run on
 EXPOSE 3000
 
-# Run the application
+# Start the application
 CMD ["node", "server.js"]
