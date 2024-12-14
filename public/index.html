@@ -1,45 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>YouTube Video Downloader</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <h1>YouTube Video Downloader</h1>
-    <input
-      type="text"
-      id="videoUrl"
-      placeholder="Enter YouTube video URL"
-    />
-    <button id="fetchQualitiesBtn">Fetch Qualities</button>
-
-    <div id="select-container">
-      <div>
-        <h3>Video + Audio</h3>
-        <select id="videoAndAudioSelect"></select>
+    <div class="form-group">
+      <label for="urlInput">Enter YouTube Video URL:</label>
+      <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=example" />
+      <button id="fetchButton">Fetch Qualities</button>
+    </div>
+    <div id="qualityContainer" class="hidden">
+      <div id="audioOnlySection" class="quality-section hidden">
+        <h2>Audio Only</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Quality</th>
+              <th>File Type</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="audioOnlyTable">
+            <!-- Dynamic content -->
+          </tbody>
+        </table>
       </div>
-      <div>
-        <h3>Video Only</h3>
-        <select id="videoOnlySelect"></select>
-      </div>
-      <div>
-        <h3>Audio Only</h3>
-        <select id="audioOnlySelect"></select>
+      <div id="videoAudioSection" class="quality-section hidden">
+        <h2>Video + Audio</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Quality</th>
+              <th>File Type</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="videoAudioTable">
+            <!-- Dynamic content -->
+          </tbody>
+        </table>
       </div>
     </div>
-
-    <button id="downloadBtn">Download Selected Quality</button>
-    <div id="progress-container" style="display: none;">
-        <div id="progress-bar" style="width: 0%;"></div>
-        <p id="progress-text">Starting download...</p>
-        <div id="download-details"></div> <!-- New element for detailed information -->
-      </div>
-      
-    <div id="status"></div>
+    <div id="errorMessage" class="error hidden"></div>
   </div>
-  <script src="script.js"></script>
+  <script src="script.js" defer></script>
 </body>
 </html>
