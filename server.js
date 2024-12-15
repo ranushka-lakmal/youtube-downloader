@@ -1,113 +1,96 @@
 const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
 const { spawn } = require("child_process");
 const path = require("path");
-const fs = require("fs");
 
 const app = express();
 const PORT = 3000;
 
-// Middleware
-app.use(bodyParser.json());
-app.use(cors());
+// Serve static files
 app.use(express.static(path.join(__dirname, "public")));
 
-// Route to fetch available video qualities
+// Endpoint to get video qualities
 app.get("/get-qualities", (req, res) => {
-  const { url } = req.query;
-
-  if (!url) {
-    console.error("YouTube URL not provided.");
-    return res
-      .status(400)
-      .json({ message: "YouTube URL is required to fetch qualities." });
+  const videoUrl = req.query.url;
+  if (!videoUrl) {
+    return res.status(400).json({ message: "Video URL is required" });
   }
 
-  console.log(`Fetching qualities for: ${url}`);
+  console.log(`Fetching qualities for: ${videoUrl}`);
 
-  const ytDlp = spawn("yt-dlp", ["-F", url]);
+  // Path to your cookies file
+  const cookiesFilePath = path.join(__dirname, "youtube_cookies.txt");
+
+  // yt-dlp command
+  const ytDlp = spawn("yt-dlp", [
+    "-F", // Fetch available formats
+    "--cookies", cookiesFilePath, // Add cookies file
+    videoUrl,
+  ]);
 
   let output = "";
+  let errorOutput = "";
+
   ytDlp.stdout.on("data", (data) => {
     output += data.toString();
   });
 
   ytDlp.stderr.on("data", (data) => {
-    console.error(`Error: ${data.toString()}`);
+    errorOutput += data.toString();
   });
 
   ytDlp.on("close", (code) => {
     if (code === 0) {
-      console.log("Fetched qualities successfully.");
+      console.log(output);
       res.json({ qualities: output });
     } else {
-      console.error(`yt-dlp process exited with code ${code}`);
-      res
-        .status(500)
-        .json({ message: "Failed to fetch video qualities. Please try again." });
+      console.error(errorOutput);
+      res.status(500).json({
+        message: "Failed to fetch video qualities",
+        error: errorOutput,
+      });
     }
   });
 });
 
-// Route to download a YouTube video
+// Endpoint to download video
 app.get("/download", (req, res) => {
-  const { url, formatId } = req.query;
-
-  if (!url) {
-    console.error("YouTube URL not provided.");
-    return res
-      .status(400)
-      .json({ message: "YouTube URL is required to download the video." });
+  const videoUrl = req.query.url;
+  const formatId = req.query.formatId;
+  if (!videoUrl || !formatId) {
+    return res.status(400).send("Video URL and Format ID are required");
   }
 
-  if (!formatId) {
-    console.error("Format ID not provided.");
-    return res
-      .status(400)
-      .json({ message: "Format ID is required to download the video." });
-  }
+  console.log(`Downloading video with Format ID: ${formatId}`);
 
-  console.log(`Downloading video from: ${url} in format: ${formatId}`);
+  // Path to your cookies file
+  const cookiesFilePath = path.join(__dirname, "youtube_cookies.txt");
 
-  // Temporary file path for the download
-  const tempFilePath = path.join(
-    __dirname,
-    `temp_download_${Date.now()}.mp4`
-  );
+  // yt-dlp command
+  const ytDlp = spawn("yt-dlp", [
+    "-f", formatId, // Select format
+    "--cookies", cookiesFilePath, // Add cookies file
+    "-o", "-", // Stream output
+    videoUrl,
+  ]);
 
-  const ytDlp = spawn("yt-dlp", ["-f", formatId, url, "-o", tempFilePath]);
+  // Set the headers for file download
+  res.setHeader("Content-Disposition", 'attachment; filename="video.mp4"');
+  res.setHeader("Content-Type", "video/mp4");
+
+  ytDlp.stdout.pipe(res);
 
   ytDlp.stderr.on("data", (data) => {
-    console.error(`Error: ${data.toString()}`);
+    console.error(data.toString());
   });
 
   ytDlp.on("close", (code) => {
-    if (code === 0) {
-      console.log("Download completed successfully.");
-
-      // Send the file to the browser for download
-      res.download(tempFilePath, "downloaded_video.mp4", (err) => {
-        if (err) {
-          console.error("Error sending the file:", err);
-          res.status(500).json({ message: "Failed to download the file." });
-        } else {
-          // Delete the temporary file after serving it
-          fs.unlink(tempFilePath, (unlinkErr) => {
-            if (unlinkErr) {
-              console.error("Error deleting temporary file:", unlinkErr);
-            }
-          });
-        }
-      });
-    } else {
+    if (code !== 0) {
       console.error(`yt-dlp process exited with code ${code}`);
-      res.status(500).json({ message: "Failed to download the video." });
     }
   });
 });
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
