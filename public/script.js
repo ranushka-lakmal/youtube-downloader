@@ -1,74 +1,166 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const fetchButton = document.getElementById("fetchButton");
-  const urlInput = document.getElementById("urlInput");
-  const qualityContainer = document.getElementById("qualityContainer");
-  const audioOnlySection = document.getElementById("audioOnlySection");
-  const videoAudioSection = document.getElementById("videoAudioSection");
-  const audioOnlyTable = document.getElementById("audioOnlyTable");
-  const videoAudioTable = document.getElementById("videoAudioTable");
-  const errorMessage = document.getElementById("errorMessage");
+document.getElementById("fetchQualitiesBtn").addEventListener("click", async () => {
+  const videoUrl = document.getElementById("videoUrl").value;
+  const videoAndAudioSelect = document.getElementById("videoAndAudioSelect");
+  const videoOnlySelect = document.getElementById("videoOnlySelect");
+  const audioOnlySelect = document.getElementById("audioOnlySelect");
 
-  fetchButton.addEventListener("click", async () => {
-    const url = urlInput.value.trim();
+  const statusDiv = document.getElementById("status");
 
-    if (!url) {
-      alert("Please enter a valid YouTube URL.");
-      return;
+  if (!videoUrl) {
+    statusDiv.innerHTML = "<p class='error'>Please enter a YouTube URL!</p>";
+    return;
+  }
+
+  statusDiv.innerHTML = "Fetching available qualities...";
+  videoAndAudioSelect.innerHTML = "<option>Loading...</option>";
+  videoOnlySelect.innerHTML = "<option>Loading...</option>";
+  audioOnlySelect.innerHTML = "<option>Loading...</option>";
+
+
+ 
+  try {
+    const response = await fetch("http://localhost:3000/get-qualities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: videoUrl }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch qualities.");
     }
 
-    qualityContainer.classList.add("hidden");
-    audioOnlySection.classList.add("hidden");
-    videoAudioSection.classList.add("hidden");
-    errorMessage.classList.add("hidden");
-    audioOnlyTable.innerHTML = "";
-    videoAudioTable.innerHTML = "";
+    const qualities = await response.json();
 
-    try {
-      const response = await fetch(`/get-qualities?url=${encodeURIComponent(url)}`);
-      const data = await response.json();
+    // Clear previous options
+    videoAndAudioSelect.innerHTML = "";
+    videoOnlySelect.innerHTML = "";
+    audioOnlySelect.innerHTML = "";
 
-      if (response.ok) {
-        const qualities = data.qualities.split("\n").slice(3); // Skip headers
-
-        qualities.forEach((line) => {
-          const columns = line.trim().split(/\s+/);
-
-          if (columns.length >= 3) {
-            const formatId = columns[0];
-            const quality = columns[1];
-            const fileType = columns.slice(2).join(" ");
-
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${quality}</td>
-              <td>${fileType}</td>
-              <td><button onclick="downloadVideo('${url}', '${formatId}')">Download</button></td>
-            `;
-
-            if (fileType.includes("audio")) {
-              audioOnlyTable.appendChild(row);
-              audioOnlySection.classList.remove("hidden");
-            } else if (fileType.includes("video")) {
-              videoAudioTable.appendChild(row);
-              videoAudioSection.classList.remove("hidden");
-            }
-          }
+    // Combine Video + Audio options
+    const combinedVideoAudio = [];
+    qualities.videoOnly.forEach((videoFormat) => {
+      qualities.audioOnly.forEach((audioFormat) => {
+        combinedVideoAudio.push({
+          id: `${videoFormat.id}+${audioFormat.id}`, // Combined format ID
+          resolution: `${videoFormat.resolution} (${videoFormat.size} Video + Audio)`,
         });
+      });
+    });
 
-        qualityContainer.classList.remove("hidden");
-      } else {
-        errorMessage.textContent = data.message || "An error occurred while fetching qualities.";
-        errorMessage.classList.remove("hidden");
-      }
-    } catch (err) {
-      console.error(err);
-      errorMessage.textContent = "Failed to fetch video qualities. Please check the console for details.";
-      errorMessage.classList.remove("hidden");
+    // Populate Video + Audio options
+    if (combinedVideoAudio.length > 0) {
+      combinedVideoAudio.forEach((format) => {
+        const option = document.createElement("option");
+        option.value = format.id;
+        option.textContent = format.resolution;
+        videoAndAudioSelect.appendChild(option);
+      });
+    } else {
+      const option = document.createElement("option");
+      option.textContent = "No Video + Audio formats available";
+      option.disabled = true;
+      videoAndAudioSelect.appendChild(option);
     }
-  });
+
+    // Populate Video Only options
+    if (qualities.videoOnly.length > 0) {
+      qualities.videoOnly.forEach((format) => {
+        const option = document.createElement("option");
+        option.value = format.id;
+        option.textContent = `${format.resolution} (${format.size})`;
+        videoOnlySelect.appendChild(option);
+      });
+    } else {
+      const option = document.createElement("option");
+      option.textContent = "No Video Only formats available";
+      option.disabled = true;
+      videoOnlySelect.appendChild(option);
+    }
+
+    // Populate Audio Only options
+    if (qualities.audioOnly.length > 0) {
+      qualities.audioOnly.forEach((format) => {
+        const option = document.createElement("option");
+        option.value = format.id;
+        option.textContent = `${format.resolution} (${format.size})`;
+        audioOnlySelect.appendChild(option);
+      });
+    } else {
+      const option = document.createElement("option");
+      option.textContent = "No Audio Only formats available";
+      option.disabled = true;
+      audioOnlySelect.appendChild(option);
+    }
+
+    statusDiv.innerHTML = "<p class='success'>Qualities fetched successfully!</p>";
+  } catch (error) {
+    console.error(error);
+    statusDiv.innerHTML = "<p class='error'>Failed to fetch qualities. Please try again.</p>";
+  }
 });
 
-async function downloadVideo(url, formatId) {
-  const downloadUrl = `/download?url=${encodeURIComponent(url)}&formatId=${formatId}`;
-  window.location.href = downloadUrl;
-}
+document.getElementById("downloadBtn").addEventListener("click", async () => {
+  const videoUrl = document.getElementById("videoUrl").value;
+  const videoAndAudioSelect = document.getElementById("videoAndAudioSelect");
+  const videoOnlySelect = document.getElementById("videoOnlySelect");
+  const audioOnlySelect = document.getElementById("audioOnlySelect");
+
+  const selectedQuality =
+    videoAndAudioSelect.value || videoOnlySelect.value || audioOnlySelect.value;
+
+  const statusDiv = document.getElementById("status");
+  const progressBar = document.getElementById("progress-bar");
+  const progressText = document.getElementById("progress-text");
+
+  if (!videoUrl || !selectedQuality) {
+    statusDiv.innerHTML = "<p class='error'>Please select a quality!</p>";
+    return;
+  }
+
+  statusDiv.innerHTML = "";
+  document.getElementById("progress-container").style.display = "block";
+  progressBar.style.width = "0%";
+  progressText.textContent = "Starting download...";
+
+  try {
+    const response = await fetch("http://localhost:3000/download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: videoUrl, formatId: selectedQuality }),
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+
+      chunk.split("\n").forEach((line) => {
+        if (line.trim()) {
+          try {
+            const progressData = JSON.parse(line.trim());
+            if (progressData.progress) {
+              const percentage = progressData.progress;
+              progressBar.style.width = `${percentage}%`;
+              progressText.textContent = `Downloading: ${percentage.toFixed(
+                2
+              )}%`;
+            }
+          } catch (e) {
+            // Ignore JSON parsing errors for partial data
+          }
+        }
+      });
+    }
+
+    progressBar.style.width = "100%";
+    progressText.textContent = "Download complete!";
+    statusDiv.innerHTML = "<p class='success'>Download completed successfully!</p>";
+  } catch (error) {
+    statusDiv.innerHTML = "<p class='error'>Something went wrong!</p>";
+    console.error(error);
+  }
+});
