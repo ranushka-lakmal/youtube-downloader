@@ -27,4 +27,5 @@ step 4 : Finally you can run
 ```sh
 node server.js   
 ```
-![App Overview]([https://github.com/ranushka-lakmal/youtube-downloader/blob/67350b07a7ea0b045c84082c11f18a13cd3834a1/Screenshot.png]))
+
+![Alt text](https://github.com/ranushka-lakmal/youtube-downloader/blob/67350b07a7ea0b045c84082c11f18a13cd3834a1/Screenshot.png)
